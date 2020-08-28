@@ -18,7 +18,7 @@ function validateOptions(options) {
    * Enabled by default.
    * Note: The autofit will only be executed until first user input.
    */
-  options.autoFit = options.autoFit !== undefined ? options.autoFit : true;
+  options.autoFit = options.autoFit !== undefined ? options.autoFit : false;
 
   /**
    * Background of the scene in hexadecimal form. Default value is 0x000000 (black);
