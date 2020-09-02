@@ -11,7 +11,7 @@ module.exports.THREE = THREE;
 var eventify = require('ngraph.events');
 
 var createNodeView = require('./lib/nodeView.js');
-var createEdgeView = require('./lib/edgeView.js');
+var createEdgeView = require('ngraph.pixel/lib/thinEdgeView');
 var createTooltipView = require('./lib/tooltip.js');
 var createAutoFit = require('./lib/autoFit.js');
 var createInput = require('./lib/input.js');
@@ -169,8 +169,8 @@ function pixel(graph, options) {
   var edgeIdToIndex = new Map();
 
   var scene, camera, renderer;
-  var nodeView, edgeView, autoFitController, input;
-  var nodes, edges;
+  var nodeView, thinEdgeView, autoFitController, input;
+  var nodes, thinEdges;
   var tooltipView = createTooltipView(container);
 
   init();
@@ -189,7 +189,7 @@ function pixel(graph, options) {
   }
 
   function getEdgeView() {
-    return edgeView;
+    return thinEdgeView;
   }
 
   function getNodeView() {
@@ -197,7 +197,7 @@ function pixel(graph, options) {
   }
 
   function redraw() {
-    edgeView.refresh();
+    thinEdgeView.refresh();
     nodeView.refresh();
   }
 
@@ -226,12 +226,12 @@ function pixel(graph, options) {
       updatePositions();
 
       nodeView.update();
-      edgeView.update();
+      thinEdgeView.update();
     } else {
       // we may not want to change positions, but colors/size could be changed
       // at this moment, so let's take care of that:
       if (nodeView.needsUpdate()) nodeView.update();
-      if (edgeView.needsUpdate()) edgeView.update();
+      if (thinEdgeView.needsUpdate()) thinEdgeView.update();
     }
 
     if (isStable) api.fire('stable', true);
@@ -275,15 +275,15 @@ function pixel(graph, options) {
   }
 
   function initPositions() {
-    edges = [];
+    thinEdges = [];
     nodes = [];
     nodeIdToIdx = new Map();
     edgeIdToIndex = new Map();
     graph.forEachNode(addNodePosition);
-    graph.forEachLink(addEdgePosition);
+    graph.forEachLink(addThinEdgePosition);
 
     nodeView.init(nodes);
-    edgeView.init(edges);
+    thinEdgeView.init(thinEdges);
 
     if (input) input.reset();
 
@@ -308,7 +308,7 @@ function pixel(graph, options) {
       nodeIdToIdx.set(node.id, idx);
     }
 
-    function addEdgePosition(edge) {
+    function addThinEdgePosition(edge) {
       var edgeModel = options.link(edge);
       if (!edgeModel) return;
 
@@ -318,16 +318,18 @@ function pixel(graph, options) {
       var toNode = nodes[nodeIdToIdx.get(edge.toId)];
       if (!toNode) return;
 
-      edgeModel.idx = edges.length;
+      edgeModel.idx = thinEdges.length;
       edgeModel.from = fromNode;
       edgeModel.to = toNode;
+      // edgeModel.type = edge.type;
 
-      edgeIdToIndex.set(edge.id, edgeModel.idx);
-
-      if (options.activeLink) {
-        edges.push(makeActive(edgeModel));
-      } else {
-        edges.push(edgeModel);
+      if (edge.data.type === 'thick') {
+        edgeIdToIndex.set(edge.id, edgeModel.idx);
+        if (options.activeLink) {
+          thinEdges.push(makeActive(edgeModel));
+        } else {
+          thinEdges.push(edgeModel);
+        }      
       }
     }
   }
@@ -343,7 +345,7 @@ function pixel(graph, options) {
 
     scene.add(camera);
     nodeView = createNodeView(scene, options);
-    edgeView = createEdgeView(scene, options);
+    thinEdgeView = createEdgeView(scene, options);
 
     if (options.autoFit) autoFitController = createAutoFit(nodeView, camera);
 
@@ -381,12 +383,12 @@ function pixel(graph, options) {
     var idx = edgeIdToIndex.get(linkId);
     if (idx === undefined) return;
 
-    return edges[idx];
+    return thinEdges[idx];
   }
 
   function forEachLink(cb) {
     if (typeof cb !== 'function') throw new Error('link visitor should be a function');
-    edges.forEach(cb);
+    thinEdges.forEach(cb);
   }
 
   function forEachNode(cb) {
