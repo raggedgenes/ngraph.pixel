@@ -323,7 +323,7 @@ function pixel(graph, options) {
       edgeModel.to = toNode;
       // edgeModel.type = edge.type;
 
-      if (edge.data.type === 'thick') {
+      if (edge.data.type === 'thin') {
         edgeIdToIndex.set(edge.id, edgeModel.idx);
         if (options.activeLink) {
           thinEdges.push(makeActive(edgeModel));
@@ -366,7 +366,7 @@ function pixel(graph, options) {
     input = createInput(camera, graph, renderer.domElement);
     input.on('move', stopAutoFit);
     input.on('nodeover', setTooltip);
-    input.on('nodeclick', passthrough('nodeclick'));
+    input.on('nodeclick', passthrough('rg_node_click'));
     input.on('nodedblclick', passthrough('nodedblclick'));
 
     window.addEventListener('resize', onWindowResize, false);
@@ -409,7 +409,7 @@ function pixel(graph, options) {
   function passthrough(name) {
     return function (e) {
       var node = getNodeByIndex(e.nodeIndex);
-      if (node) api.fire(name, node);
+      if (node) api.fire(name, { detail: { node } });
     };
   }
 
