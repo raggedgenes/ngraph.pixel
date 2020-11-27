@@ -149,7 +149,9 @@ function pixel(graph, options) {
     // Low level methods to get edgeView/nodeView.
     // TODO: update docs if this sticks.
     edgeView: getEdgeView,
-    nodeView: getNodeView
+    nodeView: getNodeView,
+
+    dispose: dispose
   };
 
   eventify(api);
@@ -172,6 +174,8 @@ function pixel(graph, options) {
   var nodeView, thinEdgeView, autoFitController, input;
   var nodes, thinEdges;
   var tooltipView = createTooltipView(container);
+
+  let requestId;
 
   init();
   run();
@@ -215,7 +219,7 @@ function pixel(graph, options) {
   }
 
   function run() {
-    requestAnimationFrame(run);
+    requestId = requestAnimationFrame(run);
 
     if (beforeFrameCallback) {
       beforeFrameCallback();
@@ -291,8 +295,13 @@ function pixel(graph, options) {
       var nodeModel = options.node(node);
       if (!nodeModel) return;
       var idx = nodes.length;
-
-      var position = layout.getNodePosition(node.id);
+      var position;
+      if (node.data && node.data.position) {
+        position = node.data.position;
+        layout.setNodePosition(node.id, position.x, position.y, position.z);
+      } else {
+        position = layout.getNodePosition(node.id);
+      }
       if (typeof position.z !== 'number') position.z = 0;
 
       nodeModel.id = node.id;
@@ -323,7 +332,7 @@ function pixel(graph, options) {
       edgeModel.to = toNode;
       // edgeModel.type = edge.type;
 
-      if (edge.data.type === 'thin') {
+      if (edge.data !== "hidden") {
         edgeIdToIndex.set(edge.id, edgeModel.idx);
         if (options.activeLink) {
           thinEdges.push(makeActive(edgeModel));
@@ -366,12 +375,18 @@ function pixel(graph, options) {
     input = createInput(camera, graph, renderer.domElement);
     input.on('move', stopAutoFit);
     input.on('nodeover', setTooltip);
+    input.on('nodeleave', hideTooltip);
     input.on('nodeclick', passthrough('rg_node_click'));
-    input.on('nodedblclick', passthrough('nodedblclick'));
+    input.on('nodedblclick', passthrough('rg_node_dbclick'));
 
     window.addEventListener('resize', onWindowResize, false);
   }
-
+  function dispose() {
+    requestId && cancelAnimationFrame(requestId);
+    nodeView.dispose();
+    thinEdgeView.dispose();
+    renderer.dispose();
+  }
   function getNode(nodeId) {
     var idx = nodeIdToIdx.get(nodeId);
     if (idx === undefined) return;
@@ -395,21 +410,24 @@ function pixel(graph, options) {
     if (typeof cb !== 'function') throw new Error('node visitor should be a function');
     nodes.forEach(cb);
   }
-
+  function hideTooltip(e) {
+    //console.log("leave");
+    api.fire('rg_node_mouseLeave');
+  }
   function setTooltip(e) {
     var node = getNodeByIndex(e.nodeIndex);
-    if (node !== undefined) {
-      tooltipView.show(e, node);
-    } else {
-      tooltipView.hide(e);
-    }
-    api.fire('nodehover', node);
+    // if (node !== undefined) {
+    //   tooltipView.show(e, node);
+    // } else {
+    //   tooltipView.hide(e);
+    // }
+    api.fire('rg_node_mouseEnter', {node, e});
   }
 
   function passthrough(name) {
     return function (e) {
-      var node = getNodeByIndex(e.nodeIndex);
-      if (node) api.fire(name, { detail: { node } });
+      //console.log('e: ' + e + ' : ' + name);
+      api.fire(name, getNodeByIndex(e.nodeIndex) || {});
     };
   }
 
