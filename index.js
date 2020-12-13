@@ -347,7 +347,7 @@ function pixel(graph, options) {
     scene = new THREE.Scene();
     scene.sortObjects = false;
 
-    camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 20000);
+    camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 60000);
     camera.position.x = 0;
     camera.position.y = 0;
     camera.position.z = 200;
@@ -491,7 +491,7 @@ function pixel(graph, options) {
 
   function showNode(nodeId, stopDistance) {
     stopDistance = typeof stopDistance === 'number' ? stopDistance : 100;
-    flyTo(camera, layout.getNodePosition(nodeId), stopDistance);
+    flyTo.fly(camera, layout.getNodePosition(nodeId), stopDistance);
   }
 }
 
